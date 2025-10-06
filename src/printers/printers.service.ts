@@ -13,7 +13,7 @@ export interface CachedPrinter {
 
 @Injectable()
 export class PrintersService {
-  private readonly CACHE_TTL_SECONDS = 5 * 60; // 5 minutos em segundos
+  private readonly CACHE_TTL_SECONDS = 5 * 60;
   private readonly CACHE_KEY = 'printers:list';
   private readonly logger = new Logger(PrintersService.name);
 
@@ -37,17 +37,11 @@ export class PrintersService {
     if (!forceRefresh) {
       const cached = await this.redis.get(this.CACHE_KEY);
       if (cached) {
-        this.logger.log('✅ Cache HIT - Retornando impressoras do Redis');
         return JSON.parse(cached);
       }
-    }
-
-    this.logger.log('❌ Cache MISS - Buscando impressoras do SMB');
-    
-    // Busca do adapter SMB
+    }    
     const rawPrinters = await this.printerAdapter.listPrinters();
     
-    // Mapeia e gera IDs
     const printers: CachedPrinter[] = rawPrinters.map((p) => ({
       id: this.generatePrinterId(p.name),
       name: p.name,
@@ -55,15 +49,11 @@ export class PrintersService {
       cachedAt: new Date(),
     }));
 
-    // Armazena no Redis com TTL automático
     await this.redis.setex(
       this.CACHE_KEY,
       this.CACHE_TTL_SECONDS,
       JSON.stringify(printers),
-    );
-    
-    this.logger.log(`📦 Cache armazenado no Redis (TTL: ${this.CACHE_TTL_SECONDS}s)`);
-    
+    );    
     return printers;
   }
 
@@ -128,7 +118,6 @@ export class PrintersService {
    */
   async clearCache(): Promise<void> {
     await this.redis.del(this.CACHE_KEY);
-    this.logger.log('🗑️ Cache Redis limpo manualmente');
   }
 
   /**
