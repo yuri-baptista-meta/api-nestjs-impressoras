@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { PrintersService } from './printers.service';
 
 class PrintDto {
-  printerName!: string;   // Ex.: "HP 9020 - Vila Cristina"
+  printerId!: string;     // ID da impressora retornado por GET /printers
   fileBase64!: string;    // PDF em base64
 }
 
@@ -10,9 +10,23 @@ class PrintDto {
 export class PrintersController {
   constructor(private readonly svc: PrintersService) {}
 
+  /**
+   * Lista impressoras disponíveis
+   * @param refresh - Query param opcional para forçar atualização do cache
+   * @example GET /printers?refresh=true
+   */
   @Get()
-  list() { return this.svc.list(); }
+  list(@Query('refresh') refresh?: string) { 
+    const forceRefresh = refresh === 'true';
+    return this.svc.list(forceRefresh); 
+  }
 
+  /**
+   * POST /printers/print
+   * Envia PDF para impressão
+   */
   @Post('print')
-  print(@Body() dto: PrintDto) { return this.svc.print(dto); }
+  print(@Body() dto: PrintDto) { 
+    return this.svc.print(dto); 
+  }
 }

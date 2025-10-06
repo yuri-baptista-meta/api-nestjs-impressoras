@@ -1,9 +1,13 @@
 FROM node:20-slim
 
-# Instala smbclient (e opcionalmente ghostscript futuramente)
+# Instala smbclient (impressão básica) e samba-common-bin (rpcclient para gerenciamento avançado)
 RUN apt-get update && apt-get install -y --no-install-recommends \
       smbclient \
+      samba-common-bin \
     && rm -rf /var/lib/apt/lists/*
+
+# Verifica instalação (opcional, pode comentar para build mais rápido)
+RUN smbclient --version && rpcclient --version
 
 # App
 WORKDIR /app
@@ -17,5 +21,4 @@ COPY . .
 ENV NODE_ENV=production
 EXPOSE 3000
 
-# Se usar TS compilado: node dist/main.js
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
