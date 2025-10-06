@@ -12,11 +12,11 @@ RUN smbclient --version && rpcclient --version
 # App
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 COPY . .
 
-# Build (se usar TS; se JS, remova)
-# RUN npm run build
+# Build TypeScript
+RUN npm run build
 
 ENV NODE_ENV=production
 EXPOSE 3000

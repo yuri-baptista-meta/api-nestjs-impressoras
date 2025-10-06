@@ -6,6 +6,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { PrintersModule } from './printers/printers.module';
 import { RedisModule } from './redis/redis.module';
+import { KafkaModule } from './kafka/kafka.module';
+import { KafkaConsumerController } from './kafka/kafka-consumer.controller';
 
 @Module({
   imports: [
@@ -22,9 +24,10 @@ import { RedisModule } from './redis/redis.module';
       ],
     }),
     RedisModule,
-    PrintersModule
+    PrintersModule,
+    KafkaModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, KafkaConsumerController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule implements NestModule {

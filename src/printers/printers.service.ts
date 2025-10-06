@@ -33,7 +33,6 @@ export class PrintersService {
    * @param forceRefresh - Força atualização do cache ignorando TTL
    */
   async list(forceRefresh: boolean = false): Promise<CachedPrinter[]> {
-    // Tenta buscar do cache Redis primeiro
     if (!forceRefresh) {
       const cached = await this.redis.get(this.CACHE_KEY);
       if (cached) {
@@ -65,7 +64,6 @@ export class PrintersService {
       throw new Error('printerId e fileBase64 são obrigatórios');
     }
 
-    // Busca lista do cache
     const cached = await this.redis.get(this.CACHE_KEY);
     
     if (!cached) {
@@ -81,6 +79,26 @@ export class PrintersService {
       throw new NotFoundException(
         `Impressora com ID "${dto.printerId}" não encontrada. Execute GET /printers para atualizar a lista.`
       );
+    }
+
+    // Modo DRY_RUN: simula impressão sem enviar para impressora real
+    const isDryRun = process.env.DRY_RUN === 'true';
+    
+    if (isDryRun) {
+      const mockJobId = `job-mock-${Date.now()}`;
+      this.logger.log(
+        `🧪 [DRY_RUN] Simulando impressão para: ${printer.name} - jobId: ${mockJobId}`
+      );
+      
+      // Simula delay de impressão (200-500ms)
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 300 + 200));
+      
+      return { 
+        jobId: mockJobId,
+        printer: printer.name,
+        status: 'simulated',
+        message: 'Impressão simulada com sucesso (DRY_RUN mode)'
+      };
     }
 
     return this.printerAdapter.printPdf({ 

@@ -20,6 +20,7 @@ API REST profissional para gerenciamento e impressão em impressoras de rede via
 
 ### Infraestrutura
 - ✅ Cache distribuído com Redis
+- ✅ Consumer Kafka para impressões assíncronas (modo híbrido)
 - ✅ Rate limiting (50 req/min)
 - ✅ Logs de requisições e cache
 - ✅ Arquitetura SOLID com interfaces
@@ -81,15 +82,24 @@ SMB_DOMAIN=DOMINIO
 REDIS_HOST=redis
 REDIS_PORT=6379
 REDIS_DB=0
+
+# Configurações do Kafka (Opcional - para modo consumer)
+KAFKA_BROKERS=kafka:9092
+KAFKA_CLIENT_ID=printers-api
+KAFKA_GROUP_ID=printers-consumer-group
+KAFKA_TOPIC=print-jobs
 ```
 
-**Nota:** Para ambientes Docker, o `REDIS_HOST` deve ser `redis` (nome do serviço). Para execução local, use `localhost`.
+**Notas:** 
+- Para ambientes Docker, use `redis` e `kafka` (nomes dos serviços)
+- Para execução local, use `localhost:6379` e `localhost:9092`
+- **Kafka é opcional** - se não configurado, API funciona apenas com HTTP REST
 
 ## 🏃 Executando
 
 ### Docker (Recomendado)
 ```bash
-# Inicia API + Redis
+# Inicia API + Redis + Kafka
 docker-compose up -d
 
 # Verifica status
@@ -98,12 +108,14 @@ docker ps
 # Ver logs
 docker logs printers-api -f
 docker logs printers-redis -f
+docker logs kafka -f
 ```
 
 **Serviços inclusos:**
 - `printers-api` - API NestJS (porta 3000)
 - `printers-redis` - Redis 7 Alpine (porta 6379)
-- `redis-data` - Volume persistente para cache
+- `kafka` - Kafka 3.x em modo KRaft (porta 9092)
+- Volumes persistentes para cache e mensagens
 
 ### Desenvolvimento
 ```bash
@@ -276,6 +288,83 @@ TTL printers:list
 
 Para detalhes sobre arquitetura, troubleshooting e operações avançadas, consulte:
 📖 **[Sistema de Cache - Documentação Completa](./docs/cache-system.md)**
+
+---
+
+## 📨 Consumer Kafka (Modo Híbrido)
+
+### Visão Geral
+
+A API funciona em **modo híbrido**: aceita requisições de impressão via **HTTP REST** e **Kafka** simultaneamente.
+
+### Características
+
+- ✅ **Assíncrono**: Impressões via Kafka não bloqueiam o producer
+- ✅ **Escalável**: Múltiplas instâncias consomem do mesmo tópico
+- ✅ **Resiliente**: Mensagens persistem se a API cair
+- ✅ **Mesma lógica**: HTTP e Kafka usam o mesmo `PrintersService`
+
+### Como Funciona
+
+```
+Producer (Sistema Externo)
+    ↓
+Kafka (tópico: print-jobs)
+    ↓
+API Consumer (automático)
+    ↓
+PrintersService.print()
+    ↓
+Impressora
+```
+
+### Formato da Mensagem
+
+Envie mensagens JSON para o tópico `print-jobs`:
+
+```json
+{
+  "printerId": "d64a128a9eab1907",
+  "fileBase64": "JVBERi0xLjQK..."
+}
+```
+
+### Teste Rápido
+
+```bash
+# 1. Entrar no container Kafka
+docker exec -it kafka bash
+
+# 2. Produzir mensagem
+kafka-console-producer --topic print-jobs --bootstrap-server localhost:9092
+
+# 3. Cole o JSON (substitua com IDs reais):
+{"value": {"printerId": "d64a128a9eab1907", "fileBase64": "JVBERi0..."}}
+
+# 4. Ver logs da API
+docker logs printers-api -f
+```
+
+**Você verá:**
+```
+[KafkaConsumerController] 📨 Mensagem Kafka recebida - printerId: d64a128a...
+[PrintersService] ❌ Cache MISS - Buscando impressoras do servidor SMB
+[KafkaConsumerController] ✅ Impressão enviada via Kafka - jobId: xxx (1234ms)
+```
+
+### Desabilitar Kafka
+
+Para rodar apenas com HTTP REST (sem Kafka):
+
+1. Remova ou comente `KAFKA_BROKERS` no `.env`
+2. Reinicie a aplicação
+
+A API detecta automaticamente e inicia apenas com HTTP.
+
+### Documentação Completa
+
+📖 **[Como Testar Kafka](./docs/KAFKA-TESTING.md)** - Guia completo de testes
+📖 **[Integração Kafka](./docs/INTEGRACAO-KAFKA.md)** - Arquitetura e decisões
 
 ---
 
