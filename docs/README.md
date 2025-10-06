@@ -1,128 +1,214 @@
-# Documentação da API
+# 📚 Documentação da API de Impressão
 
-Índice completo da documentação do sistema de impressoras SMB.
-
----
-
-## 📚 Documentos Disponíveis
-
-### Visão Geral e Setup
-- **[README.md](../README.md)** - Introdução, instalação e guia rápido
-- **[Docker Setup](./docker-setup.md)** - Configuração Docker com rpcclient (159 linhas)
-
-### Funcionalidades do Sistema
-- **[Sistema de Cache](./cache-system.md)** - Cache inteligente com IDs únicos (354 linhas)
-- **[Gerenciamento de Impressoras](./printer-management.md)** - Operações avançadas com rpcclient (528 linhas)
-
-### Arquitetura e Código
-- **[Arquitetura de Módulos](./module-architecture.md)** - Boas práticas NestJS, DI e organização (599 linhas)
-- **[Padrões de Projeto](./design-patterns.md)** - SOLID, DI, Adapter Pattern (482 linhas)
-- **[Interfaces e Adapters](./interface-improvements.md)** - Type-safety e implementações (344 linhas)
-
-### Testes
-- **[Testes de API](./api-testing.md)** - Exemplos com cURL, scripts e clientes (334 linhas)
-- **[Scripts de Teste](./scripts/README.md)** - Scripts bash automatizados (.sh)
+Sistema de impressão em impressoras SMB com cache Redis e integração Kafka.
 
 ---
 
-## 🚀 Por Onde Começar?
+## 🎯 Documentação Principal
 
-### 1. Novo no Projeto?
-1. Leia o **[README.md](../README.md)** principal
-2. Configure o ambiente com **[Docker Setup](./docker-setup.md)**
-3. Teste as APIs com **[API Testing](./api-testing.md)**
+### **[📡 API-ENDPOINTS.md](./API-ENDPOINTS.md)**
+Documentação completa de todos os endpoints HTTP REST.
 
-### 2. Quer Entender o Cache?
-- **[Sistema de Cache](./cache-system.md)** - Funcionamento, performance e troubleshooting
+**Conteúdo:**
+- Health check e operações básicas
+- Listagem de impressoras com cache
+- Impressão de PDFs via HTTP
+- Gerenciamento avançado (status, filas, pausar/retomar)
+- Performance e métricas
+- Modo DRY_RUN
 
-### 3. Precisa de Operações Avançadas?
-- **[Gerenciamento de Impressoras](./printer-management.md)** - Status, filas, cancelamento
-
-### 4. Quer Entender a Arquitetura?
-- **[Padrões de Projeto](./design-patterns.md)** - Como o código está organizado
-- **[Interfaces e Adapters](./interface-improvements.md)** - Flexibilidade e extensibilidade
+**Quando usar:** Integrar com a API ou testar endpoints manualmente.
 
 ---
 
-## 📖 Resumo por Documento
+### **[⚡ KAFKA-INTEGRATION.md](./KAFKA-INTEGRATION.md)**
+Sistema de impressão assíncrona via Apache Kafka 3.7.0 (KRaft mode).
 
-### README.md (Principal)
-**O que você encontra:**
-- Características principais da API
-- Pré-requisitos e instalação
-- Comandos de execução (Docker, dev, prod)
-- Endpoints disponíveis (básicos e avançados)
-- Arquitetura do projeto
-- Links para docs detalhados
+**Conteúdo:**
+- Arquitetura Kafka + NestJS hybrid
+- Configuração completa (Docker + env vars)
+- Consumer e producer examples
+- Teste manual passo a passo
+- Verificação de saúde do Kafka
+- Proteção contra cache expirado
 
-**Quando usar:** Primeira leitura e referência rápida
-
----
-
-### cache-system.md
-**O que você encontra:**
-- Como funciona o cache read-through
-- IDs determinísticos (SHA256)
-- Benefícios de performance (97.5% de ganho)
-- TTL e expiração (5 minutos)
-- Troubleshooting de erros de cache
-- Customização e Redis
-
-**Quando usar:** 
-- Erros de "impressora não encontrada"
-- Performance lenta
-- Implementar cache distribuído
+**Quando usar:** Implementar impressão assíncrona via mensageria.
 
 ---
 
-### printer-management.md
-**O que você encontra:**
-- Comparação smbclient vs rpcclient
-- Operações avançadas (status, fila, cancelamento)
-- Formato de output do rpcclient
-- Exemplos práticos de cada operação
-- Limitações e requisitos
-- Permissões necessárias no servidor
+### **[📦 REDIS-CACHE.md](./REDIS-CACHE.md)**
+Cache perpétuo com estratégia stale-while-revalidate.
 
-**Quando usar:**
-- Implementar gerenciamento de filas
-- Verificar status de impressoras
-- Cancelar/pausar jobs
-- Troubleshooting de permissões
+**Conteúdo:**
+- Arquitetura do cache Redis
+- Fluxo de funcionamento (diagramas visuais)
+- Cenários detalhados (fresco, stale, vazio)
+- Comportamento por idade do cache
+- Proteção contra refresh duplicado
+- Performance e métricas
+
+**Quando usar:** Entender como funciona o cache e troubleshooting.
 
 ---
 
-### design-patterns.md
-**O que você encontra:**
-- Problema original (acoplamento)
-- Refatoração para SOLID
-- Adapter Pattern
-- Dependency Injection
-- Comparação antes/depois
-- Benefícios para testes e manutenção
+### **[🏗️ ARCHITECTURE.md](./ARCHITECTURE.md)**
+Padrões de projeto e design da aplicação.
 
-**Quando usar:**
-- Entender decisões arquiteturais
-- Adicionar novo protocolo (IPP, LPD)
-- Melhorar testabilidade
-- Code review
+**Conteúdo:**
+- Estrutura de módulos e pastas
+- Padrões aplicados (Adapter, DI, Repository, SWR)
+- SOLID principles
+- Hybrid architecture (HTTP + Kafka)
+- Testabilidade e extensibilidade
+- Fluxo de dados
+
+**Quando usar:** Entender decisões de arquitetura ou adicionar features.
 
 ---
 
-### interface-improvements.md
-**O que você encontra:**
-- Interface IPrinterAdapter completa
-- Tipos auxiliares (PrinterStatus, PrintJob)
-- Implementações (Advanced, Basic, Mock)
-- Matriz de suporte (quem implementa o quê)
-- Type-safety e benefícios
-- Erros informativos
+### **[🧪 TESTING.md](./TESTING.md)**
+Estratégias e guias de teste.
 
-**Quando usar:**
-- Criar novo adapter
-- Entender diferenças entre adapters
-- Implementar mocks para testes
-- Troubleshooting de type errors
+**Conteúdo:**
+- Modo DRY_RUN para testes sem hardware
+- Testes manuais (HTTP e Kafka)
+- Verificações de infraestrutura
+- Testes unitários (examples)
+- Checklist de testes antes de deploy
+- Scripts úteis
+
+**Quando usar:** Testar o sistema ou configurar CI/CD.
+
+---
+
+## 🚀 Guia Rápido
+
+### Novo no Projeto?
+
+1. **Instalar e Rodar:**
+   ```bash
+   docker-compose up -d
+   curl http://localhost:3000/printers
+   ```
+
+2. **Ler Documentação:**
+   - [API-ENDPOINTS.md](./API-ENDPOINTS.md) - Para usar a API
+   - [TESTING.md](./TESTING.md) - Para testar
+
+3. **Entender Arquitetura:**
+   - [ARCHITECTURE.md](./ARCHITECTURE.md) - Padrões e estrutura
+   - [REDIS-CACHE.md](./REDIS-CACHE.md) - Como funciona o cache
+
+---
+
+### Implementar Integração?
+
+**HTTP:**
+- Veja [API-ENDPOINTS.md](./API-ENDPOINTS.md)
+- Exemplos com cURL, Node.js, etc.
+
+**Kafka:**
+- Veja [KAFKA-INTEGRATION.md](./KAFKA-INTEGRATION.md)
+- Producer examples e formato de mensagem
+
+---
+
+### Troubleshooting?
+
+**Erro 500 ou cache expirado:**
+- Leia [REDIS-CACHE.md](./REDIS-CACHE.md) seção "Cenários Detalhados"
+
+**Kafka não conecta:**
+- Veja [KAFKA-INTEGRATION.md](./KAFKA-INTEGRATION.md) seção "Verificação de Saúde"
+
+**Performance ruim:**
+- Confira [API-ENDPOINTS.md](./API-ENDPOINTS.md) seção "Performance"
+
+---
+
+## 📁 Estrutura dos Documentos
+
+```
+docs/
+├── README.md                  # Este arquivo (índice)
+├── API-ENDPOINTS.md           # Documentação HTTP REST
+├── KAFKA-INTEGRATION.md       # Integração Kafka
+├── REDIS-CACHE.md             # Sistema de cache
+├── ARCHITECTURE.md            # Padrões e arquitetura
+├── TESTING.md                 # Testes e DRY_RUN
+│
+├── archived/                  # Documentos antigos (histórico)
+│   ├── api-testing.md
+│   ├── cache-system.md
+│   ├── design-patterns.md
+│   ├── module-architecture.md
+│   └── ...
+│
+└── scripts/                   # Scripts bash de teste
+    ├── README.md
+    ├── rebuild-and-test.sh
+    └── test-cache-system.sh
+```
+
+---
+
+## 📊 Comparação: Antes vs Depois
+
+### ❌ ANTES (11 arquivos)
+- api-testing.md (335 linhas)
+- printer-management.md (529 linhas)
+- TESTE-KAFKA-MANUAL.md (210 linhas)
+- design-patterns.md (483 linhas)
+- module-architecture.md (600 linhas)
+- cache-system.md (414 linhas)
+- CACHE-FLUXO.md (233 linhas)
+- docker-setup.md
+- interface-improvements.md
+- WIKI.md
+- README.md (292 linhas)
+
+**Problemas:**
+- Informação duplicada
+- Difícil encontrar conteúdo
+- Verboso demais
+
+---
+
+### ✅ DEPOIS (5 arquivos + índice)
+- **API-ENDPOINTS.md** - Todos endpoints HTTP
+- **KAFKA-INTEGRATION.md** - Kafka completo
+- **REDIS-CACHE.md** - Cache com diagramas visuais
+- **ARCHITECTURE.md** - Padrões e estrutura
+- **TESTING.md** - Testes e DRY_RUN
+
+**Vantagens:**
+- ✅ Conteúdo focado e objetivo
+- ✅ Fácil navegação
+- ✅ Diagramas visuais preservados
+- ✅ Documentos antigos arquivados (não perdidos)
+
+---
+
+## 🎯 Como Contribuir
+
+### Adicionar Nova Feature
+
+1. Implementar código
+2. Atualizar documentação relevante:
+   - Novo endpoint? → [API-ENDPOINTS.md](./API-ENDPOINTS.md)
+   - Mudança no cache? → [REDIS-CACHE.md](./REDIS-CACHE.md)
+   - Novo padrão? → [ARCHITECTURE.md](./ARCHITECTURE.md)
+3. Adicionar testes em [TESTING.md](./TESTING.md)
+
+---
+
+### Reportar Problema na Documentação
+
+Abra issue ou PR com:
+- Qual documento está incorreto
+- O que deveria estar escrito
+- Exemplo ou screenshot (se aplicável)
+
 
 ---
 
