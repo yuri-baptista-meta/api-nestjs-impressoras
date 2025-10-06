@@ -29,4 +29,13 @@ export class PrintersController {
   print(@Body() dto: PrintDto) { 
     return this.svc.print(dto); 
   }
+
+  /**
+   * GET /printers/cache-info
+   * Retorna informações sobre o cache Redis (debug)
+   */
+  @Get('cache-info')
+  async cacheInfo() {
+    return this.svc.getCacheInfo();
+  }
 }

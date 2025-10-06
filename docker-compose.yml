@@ -7,3 +7,26 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    depends_on:
+      - redis
+    networks:
+      - printers-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: printers-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - printers-network
+
+volumes:
+  redis-data:
+
+networks:
+  printers-network:
+    driver: bridge

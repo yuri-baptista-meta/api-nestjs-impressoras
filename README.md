@@ -7,8 +7,9 @@ API REST profissional para gerenciamento e impressão em impressoras de rede via
 ### Operações Básicas
 - ✅ Descoberta automática de impressoras SMB
 - ✅ Impressão de PDFs via smbclient
-- ✅ Sistema de cache inteligente (5 min TTL)
+- ✅ Sistema de cache distribuído com Redis (5 min TTL)
 - ✅ IDs únicos e determinísticos (SHA256)
+- ✅ Cache compartilhado entre múltiplas instâncias
 
 ### Operações Avançadas (rpcclient)
 - ✅ Verificação de status de impressoras
@@ -18,11 +19,13 @@ API REST profissional para gerenciamento e impressão em impressoras de rede via
 - ✅ Limpeza completa de filas
 
 ### Infraestrutura
+- ✅ Cache distribuído com Redis
 - ✅ Rate limiting (50 req/min)
-- ✅ Logs de requisições
+- ✅ Logs de requisições e cache
 - ✅ Arquitetura SOLID com interfaces
-- ✅ Suporte completo a Docker
+- ✅ Suporte completo a Docker + Docker Compose
 - ✅ Múltiplos adapters (SMB, IPP, LPD, Mock)
+- ✅ Persistência de cache com volume Docker
 
 ## 📋 Pré-requisitos
 
@@ -65,19 +68,42 @@ cp copy\ env .env
 Crie o arquivo `.env` na raiz do projeto:
 
 ```env
+# Configurações da API
 PORT=3000
+
+# Credenciais do servidor SMB
 SMB_HOST=servidor.dominio.local
 SMB_USER=usuario
 SMB_PASS=senha
 SMB_DOMAIN=DOMINIO
+
+# Configurações do Redis (Docker)
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
 ```
+
+**Nota:** Para ambientes Docker, o `REDIS_HOST` deve ser `redis` (nome do serviço). Para execução local, use `localhost`.
 
 ## 🏃 Executando
 
 ### Docker (Recomendado)
 ```bash
+# Inicia API + Redis
 docker-compose up -d
+
+# Verifica status
+docker ps
+
+# Ver logs
+docker logs printers-api -f
+docker logs printers-redis -f
 ```
+
+**Serviços inclusos:**
+- `printers-api` - API NestJS (porta 3000)
+- `printers-redis` - Redis 7 Alpine (porta 6379)
+- `redis-data` - Volume persistente para cache
 
 ### Desenvolvimento
 ```bash
@@ -185,6 +211,73 @@ Pausa um job específico.
 
 #### `POST /printers/management/:id/queue/:jobId/resume`
 Retoma um job pausado.
+
+---
+
+## 🚀 Sistema de Cache Redis
+
+### Visão Geral
+
+A API utiliza **Redis** como cache distribuído para armazenar a lista de impressoras, melhorando significativamente a performance e permitindo escalabilidade horizontal.
+
+### Performance
+
+| Cenário | Sem Cache | Com Redis | Ganho |
+|---------|-----------|-----------|-------|
+| 1ª chamada | 1.704s | 1.704s | - |
+| Chamadas subsequentes | 1.704s | 0.247s | **85.5%** |
+
+### Características
+
+- ✅ **TTL Automático:** Cache expira em 5 minutos (300s)
+- ✅ **Cache Compartilhado:** Múltiplas instâncias da API usam o mesmo cache
+- ✅ **Persistência:** Dados sobrevivem a restart da API
+- ✅ **Refresh Manual:** Use `?refresh=true` para forçar atualização
+- ✅ **Observabilidade:** Logs detalhados de Cache HIT/MISS
+
+### Endpoints de Cache
+
+```bash
+# Listar impressoras (usa cache se disponível)
+GET /printers
+
+# Forçar atualização do cache
+GET /printers?refresh=true
+
+# Verificar status do cache
+GET /printers/cache-info
+```
+
+**Exemplo de resposta do `/cache-info`:**
+```json
+{
+  "exists": true,
+  "ttl": 245
+}
+```
+
+### Inspecionando o Cache
+
+```bash
+# Conectar ao Redis
+docker exec -it printers-redis redis-cli
+
+# Listar chaves
+KEYS *
+
+# Ver conteúdo
+GET printers:list
+
+# Verificar TTL
+TTL printers:list
+```
+
+### Documentação Completa
+
+Para detalhes sobre arquitetura, troubleshooting e operações avançadas, consulte:
+📖 **[Sistema de Cache - Documentação Completa](./docs/cache-system.md)**
+
+---
 
 ## 📚 Documentação Adicional
 

@@ -1,5 +1,7 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { IPrinterAdapter, PRINTER_ADAPTER } from '@/domain/printer-adapter.interface';
+import { REDIS_CLIENT } from '@/redis/redis.module';
+import { Redis } from 'ioredis';
 import { createHash } from 'crypto';
 
 export interface CachedPrinter {
@@ -11,57 +13,56 @@ export interface CachedPrinter {
 
 @Injectable()
 export class PrintersService {
-  private printerCache = new Map<string, CachedPrinter>();
-  private readonly CACHE_TTL_MS = 5 * 60 * 1000;
-  private lastFetchTime: number | null = null;
+  private readonly CACHE_TTL_SECONDS = 5 * 60; // 5 minutos em segundos
+  private readonly CACHE_KEY = 'printers:list';
+  private readonly logger = new Logger(PrintersService.name);
 
   /**
-   * Injeta a interface IPrinterAdapter.
+   * Injeta a interface IPrinterAdapter e o cliente Redis.
    * Permite trocar implementação (SMB, IPP, LPD) sem modificar este service.
-   * Seguindo Dependency Inversion Principle (SOLID).
+   * Cache agora é distribuído via Redis.
    */
   constructor(
-    @Inject(PRINTER_ADAPTER) private readonly printerAdapter: IPrinterAdapter
+    @Inject(PRINTER_ADAPTER) private readonly printerAdapter: IPrinterAdapter,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   /**
    * Lista impressoras disponíveis.
-   * Usa cache se disponível e válido, caso contrário busca do SMB.
+   * Usa cache Redis se disponível e válido, caso contrário busca do SMB.
    * @param forceRefresh - Força atualização do cache ignorando TTL
    */
   async list(forceRefresh: boolean = false): Promise<CachedPrinter[]> {
-    const now = Date.now();
-    
-    const shouldFetchFromSmb = 
-      forceRefresh || 
-      this.lastFetchTime === null || 
-      (now - this.lastFetchTime) > this.CACHE_TTL_MS ||
-      this.printerCache.size === 0;
-
-    if (!shouldFetchFromSmb) {
-      return Array.from(this.printerCache.values());
+    // Tenta buscar do cache Redis primeiro
+    if (!forceRefresh) {
+      const cached = await this.redis.get(this.CACHE_KEY);
+      if (cached) {
+        this.logger.log('✅ Cache HIT - Retornando impressoras do Redis');
+        return JSON.parse(cached);
+      }
     }
 
+    this.logger.log('❌ Cache MISS - Buscando impressoras do SMB');
+    
+    // Busca do adapter SMB
     const rawPrinters = await this.printerAdapter.listPrinters();
     
-    this.printerCache.clear();
-    
-    const printers = rawPrinters.map((p) => {
-      const id = this.generatePrinterId(p.name);
-      
-      const cached: CachedPrinter = {
-        id,
-        name: p.name,
-        uri: p.uri,
-        cachedAt: new Date(),
-      };
-      
-      this.printerCache.set(id, cached);
-      
-      return cached;
-    });
+    // Mapeia e gera IDs
+    const printers: CachedPrinter[] = rawPrinters.map((p) => ({
+      id: this.generatePrinterId(p.name),
+      name: p.name,
+      uri: p.uri,
+      cachedAt: new Date(),
+    }));
 
-    this.lastFetchTime = now;
+    // Armazena no Redis com TTL automático
+    await this.redis.setex(
+      this.CACHE_KEY,
+      this.CACHE_TTL_SECONDS,
+      JSON.stringify(printers),
+    );
+    
+    this.logger.log(`📦 Cache armazenado no Redis (TTL: ${this.CACHE_TTL_SECONDS}s)`);
     
     return printers;
   }
@@ -74,18 +75,21 @@ export class PrintersService {
       throw new Error('printerId e fileBase64 são obrigatórios');
     }
 
-    const printer = this.printerCache.get(dto.printerId);
+    // Busca lista do cache
+    const cached = await this.redis.get(this.CACHE_KEY);
+    
+    if (!cached) {
+      throw new NotFoundException(
+        `Cache de impressoras expirou. Execute GET /printers para atualizar a lista.`
+      );
+    }
+
+    const printers: CachedPrinter[] = JSON.parse(cached);
+    const printer = printers.find((p) => p.id === dto.printerId);
     
     if (!printer) {
       throw new NotFoundException(
         `Impressora com ID "${dto.printerId}" não encontrada. Execute GET /printers para atualizar a lista.`
-      );
-    }
-
-    const age = Date.now() - printer.cachedAt.getTime();
-    if (age > this.CACHE_TTL_MS) {
-      throw new NotFoundException(
-        `Cache da impressora "${printer.name}" expirou. Execute GET /printers para atualizar.`
       );
     }
 
@@ -108,15 +112,32 @@ export class PrintersService {
   /**
    * Retorna informações de uma impressora específica pelo ID
    */
-  getPrinterById(printerId: string): CachedPrinter | undefined {
-    return this.printerCache.get(printerId);
+  async getPrinterById(printerId: string): Promise<CachedPrinter | undefined> {
+    const cached = await this.redis.get(this.CACHE_KEY);
+    
+    if (!cached) {
+      return undefined;
+    }
+
+    const printers: CachedPrinter[] = JSON.parse(cached);
+    return printers.find((p) => p.id === printerId);
   }
 
   /**
-   * Limpa todo o cache manualmente e força refresh no próximo list()
+   * Limpa todo o cache manualmente do Redis
    */
-  clearCache(): void {
-    this.printerCache.clear();
-    this.lastFetchTime = null;
+  async clearCache(): Promise<void> {
+    await this.redis.del(this.CACHE_KEY);
+    this.logger.log('🗑️ Cache Redis limpo manualmente');
+  }
+
+  /**
+   * Retorna informações sobre o cache (útil para debugging)
+   */
+  async getCacheInfo(): Promise<{ exists: boolean; ttl: number }> {
+    const exists = (await this.redis.exists(this.CACHE_KEY)) === 1;
+    const ttl = await this.redis.ttl(this.CACHE_KEY);
+    
+    return { exists, ttl };
   }
 }

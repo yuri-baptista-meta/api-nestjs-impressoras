@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { PrintersModule } from './printers/printers.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PrintersModule } from './printers/printers.module';
         },
       ],
     }),
+    RedisModule,
     PrintersModule
   ],
   controllers: [AppController],

@@ -21,7 +21,7 @@ export class PrintersManagementService {
    * Obtém status de uma impressora por ID
    */
   async getPrinterStatus(printerId: string): Promise<PrinterStatus> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
@@ -34,7 +34,7 @@ export class PrintersManagementService {
    * Lista jobs na fila de uma impressora
    */
   async getQueue(printerId: string): Promise<PrintJob[]> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
@@ -47,7 +47,7 @@ export class PrintersManagementService {
    * Cancela um job específico
    */
   async cancelJob(printerId: string, jobId: number): Promise<{ success: boolean; message: string }> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
@@ -67,7 +67,7 @@ export class PrintersManagementService {
    * Limpa toda a fila de uma impressora
    */
   async clearQueue(printerId: string): Promise<{ canceledCount: number; message: string }> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
@@ -85,7 +85,7 @@ export class PrintersManagementService {
    * Pausa uma impressora
    */
   async pausePrinter(printerId: string): Promise<{ success: boolean; message: string }> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
@@ -105,7 +105,7 @@ export class PrintersManagementService {
    * Retoma uma impressora pausada
    */
   async resumePrinter(printerId: string): Promise<{ success: boolean; message: string }> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
@@ -125,7 +125,7 @@ export class PrintersManagementService {
    * Pausa um job específico
    */
   async pauseJob(printerId: string, jobId: number): Promise<{ success: boolean; message: string }> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
@@ -145,7 +145,7 @@ export class PrintersManagementService {
    * Retoma um job pausado
    */
   async resumeJob(printerId: string, jobId: number): Promise<{ success: boolean; message: string }> {
-    const printer = this.printersService.getPrinterById(printerId);
+    const printer = await this.printersService.getPrinterById(printerId);
     
     if (!printer) {
       throw new NotFoundException(`Impressora com ID "${printerId}" não encontrada`);
